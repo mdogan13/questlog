@@ -48,6 +48,30 @@ docker build -t questlog .
 docker run -d --name questlog -p 3000:3000 -v questlog-data:/data questlog
 ```
 
+### Update the LXC deployment
+
+After pushing changes to GitHub, run inside the LXC:
+
+```sh
+cd /opt/questlog
+bash scripts/update-lxc.sh
+```
+
+The first time, run `git pull --ff-only` first to download the script.
+It pulls the current branch, builds the image while the app stays available,
+stops the app, backs up the entire `/data` directory, and recreates the container
+using the same `questlog-data` volume and automatic restart policy. It checks
+that the updated app responds before reporting success. Refresh your browser
+afterward.
+
+This script targets the default `questlog` container on port 3000. It refuses
+to proceed if the existing container uses a different data mount or the checkout
+has changes to tracked files. Backups are saved under `/opt/questlog-backups`
+(override with `BACKUP_DIR`). If the build fails, the running app is left alone;
+if the backup fails, the old container is restarted. A startup failure is reported
+with the backup location; backups are never restored automatically. Copy important
+backups off the LXC as well.
+
 Quest validation and completion rules live in `src/lib/quest-rules.ts`. Database
 access is confined to server functions in `src/lib/quests.functions.ts` and the
 SQLite connection in `src/lib/db.server.ts`.
