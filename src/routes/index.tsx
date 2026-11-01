@@ -53,16 +53,20 @@ function QuestLog() {
   });
 
   return (
-    <div className="flex min-h-screen flex-col">
-      <header className="flex items-center justify-center gap-6 px-6 pt-6 pb-3">
+    <div className="flex min-h-dvh flex-col lg:h-dvh lg:overflow-hidden">
+      <header className="flex shrink-0 items-center justify-center gap-6 px-6 pt-6 pb-3">
         <span className="divider-gold w-32" />
         <h1 className="font-display text-2xl text-gold">Quests</h1>
         <span className="divider-gold w-32" />
       </header>
 
-      <main className="grid flex-1 grid-cols-1 gap-6 px-6 pb-6 lg:grid-cols-[320px_1fr_1fr]">
+      <main className="grid min-h-0 min-w-0 flex-1 grid-cols-1 gap-6 px-6 pb-6 lg:grid-cols-[320px_minmax(0,1fr)_minmax(0,1fr)] lg:overflow-hidden">
         {/* Left: quest list */}
-        <aside className="flex flex-col gap-3 border-r-0 lg:border-r lg:pr-6">
+        <aside
+          aria-label="Quest list"
+          className="flex max-h-[65dvh] min-h-0 min-w-0 flex-col gap-3 overflow-hidden border-r-0 lg:max-h-none lg:border-r lg:pr-6"
+        >
+          <div className="shrink-0">
           <NewQuestDialog
             onSubmit={async (q) => {
               const { id } = await createQuest({ data: { ...q, objectives: q.objectives.map((o) => o.text) } });
@@ -70,13 +74,21 @@ function QuestLog() {
               setSelectedId(id);
             }}
           />
+          </div>
+          <div
+            role="region"
+            aria-label="Quest categories"
+            tabIndex={0}
+            className="min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain pr-2 [scrollbar-gutter:stable]"
+          >
           <QuestGroup title="Main Quests" quests={main} selected={selected} onSelect={setSelectedId} />
           <QuestGroup title="Secondary Quests" quests={side} selected={selected} onSelect={setSelectedId} />
           <QuestGroup title="Completed Quests" quests={done} selected={selected} onSelect={setSelectedId} defaultOpen={false} />
+          </div>
         </aside>
 
         {!selected ? (
-          <div className="col-span-2 flex flex-col items-center justify-center text-center text-muted-foreground">
+          <div className="flex flex-col items-center justify-center text-center text-muted-foreground lg:col-span-2">
             <Scroll className="mb-4 h-12 w-12 text-gold-dim" />
             <p className="font-display text-lg">Your journal is empty</p>
             <p className="mt-1 italic">Every legend begins with a single quest.</p>
@@ -84,15 +96,26 @@ function QuestLog() {
         ) : (
           <>
             {/* Middle: name + objectives */}
-            <section className="animate-in fade-in">
+            <section
+              aria-label="Quest objectives"
+              className="flex max-h-[65dvh] min-h-0 min-w-0 flex-col overflow-hidden animate-in fade-in lg:max-h-none"
+            >
+              <div className="shrink-0">
               <p className="font-display text-xs uppercase text-gold-dim">
                 {selected.type === "main" ? "Main Quest" : "Secondary Quest"}
                 {selected.done && " · Completed"}
               </p>
-              <h2 className={`font-display mt-1 text-3xl ${selected.done ? "text-muted-foreground" : "text-gold"}`}>
+              <h2 className={`font-display mt-1 break-words text-3xl ${selected.done ? "text-muted-foreground" : "text-gold"}`}>
                 {selected.name}
               </h2>
               <div className="divider-gold my-4" />
+              </div>
+              <div
+                role="region"
+                aria-label="Objective list"
+                tabIndex={0}
+                className="min-h-0 flex-1 overflow-y-auto overscroll-contain py-1 pl-1 pr-2 [scrollbar-gutter:stable]"
+              >
               {selected.objectives.length === 0 ? (
                 <p className="italic text-muted-foreground">No objectives. Mark the quest complete when it's done.</p>
               ) : (
@@ -118,10 +141,15 @@ function QuestLog() {
                   ))}
                 </ul>
               )}
+              </div>
             </section>
 
             {/* Right: details */}
-            <section className="animate-in fade-in border-border lg:border-l lg:pl-6">
+            <section
+              aria-label="Quest details and actions"
+              tabIndex={0}
+              className="max-h-[65dvh] min-h-0 min-w-0 overflow-y-auto overscroll-contain border-border pr-2 [scrollbar-gutter:stable] animate-in fade-in lg:max-h-none lg:border-l lg:pl-6"
+            >
               <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
                 {selected.location && (
                   <span className="flex items-center gap-1.5">

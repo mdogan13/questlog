@@ -56,7 +56,7 @@ export function NewQuestDialog({
           <Plus className="h-4 w-4" /> New Quest
         </button>}
       </DialogTrigger>
-      <DialogContent className="border-gold-dim bg-popover sm:max-w-lg">
+      <DialogContent className="max-h-[calc(100dvh-2rem)] overflow-y-auto border-gold-dim bg-popover sm:max-w-lg">
         <DialogHeader>
           <DialogTitle className="font-display text-xl text-gold">{quest ? "Amend the Quest" : "Inscribe a New Quest"}</DialogTitle>
         </DialogHeader>
@@ -89,6 +89,12 @@ export function NewQuestDialog({
           </div>
           <div className="space-y-2">
             <Label className="font-display text-xs text-muted-foreground">Objectives (optional)</Label>
+            <div
+              role="region"
+              aria-label="Quest objective inputs"
+              tabIndex={0}
+              className="max-h-48 space-y-2 overflow-y-auto overscroll-contain py-1 pr-2 [scrollbar-gutter:stable]"
+            >
             {objectives.map((o, i) => (
               <div key={i} className="flex gap-2">
                 <Input
@@ -106,6 +112,7 @@ export function NewQuestDialog({
                 </button>
               </div>
             ))}
+            </div>
             <button
               type="button"
               onClick={() => setObjectives([...objectives, { text: "" }])}
