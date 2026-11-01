@@ -7,6 +7,12 @@ Create main and side quests with descriptions, locations, and objectives. Comple
 objectives individually or finish a whole quest, and browse completed quests in
 your journal.
 
+Use **Track Quest** beside **Complete Quest** to pin a quest to the top of its
+category. Tracked quests show a gold pin and stay tracked across refreshes.
+Completing a quest automatically untracks it. Completed quests cannot be tracked;
+reopen them first. Existing SQLite databases are upgraded
+automatically when the updated server starts handling quests.
+
 ## Development
 
 Use Node.js 22.13+ and Bun to install dependencies. Run the app with Node.js so

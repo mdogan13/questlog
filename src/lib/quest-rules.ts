@@ -20,9 +20,20 @@ export type Quest = {
   description: string;
   location: string;
   done: boolean;
+  tracked: boolean;
   createdAt: string;
   objectives: Objective[];
 };
+
+export const setQuestTrackedSchema = z.object({
+  questId: z.number().int().positive(),
+  tracked: z.boolean(),
+});
+
+/** Pin tracked quests while preserving the existing order within each group. */
+export function trackedQuestsFirst<T extends { tracked: boolean }>(quests: readonly T[]): T[] {
+  return [...quests.filter((quest) => quest.tracked), ...quests.filter((quest) => !quest.tracked)];
+}
 
 /** A quest with objectives is done exactly when all its objectives are done. */
 export function questDoneAfterObjectiveChange(objectives: { done: boolean }[], wasDone: boolean) {

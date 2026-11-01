@@ -18,6 +18,7 @@ export function getDb() {
       description TEXT NOT NULL DEFAULT '',
       location TEXT NOT NULL DEFAULT '',
       done INTEGER NOT NULL DEFAULT 0,
+      tracked INTEGER NOT NULL DEFAULT 0 CHECK (tracked IN (0, 1)),
       created_at TEXT NOT NULL DEFAULT (datetime('now'))
     );
     CREATE TABLE IF NOT EXISTS objectives (
@@ -28,5 +29,12 @@ export function getDb() {
       position INTEGER NOT NULL
     );
   `);
+  // Upgrade existing journals without replacing their quests or objectives.
+  const columns = db.prepare("PRAGMA table_info(quests)").all();
+  if (!columns.some((column) => column['name'] === "tracked")) {
+    db.exec("ALTER TABLE quests ADD COLUMN tracked INTEGER NOT NULL DEFAULT 0 CHECK (tracked IN (0, 1))");
+  }
+  // Clear tracking left on completed quests by older app versions.
+  db.exec("UPDATE quests SET tracked = 0 WHERE done = 1 AND tracked != 0");
   return db;
 }

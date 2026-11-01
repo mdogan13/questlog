@@ -1,11 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { queryOptions, useMutation, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { useState } from "react";
-import { ChevronDown, MapPin, Swords, Scroll, Check, Trash2, Pencil } from "lucide-react";
+import { ChevronDown, MapPin, Swords, Scroll, Check, Trash2, Pencil, Pin, PinOff } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { NewQuestDialog } from "@/components/quests/NewQuestDialog";
-import { createQuest, deleteQuest, listQuests, setQuestDone, toggleObjective, updateQuest } from "@/lib/quests.functions";
-import type { Quest } from "@/lib/quest-rules";
+import { createQuest, deleteQuest, listQuests, setQuestDone, setQuestTracked, toggleObjective, updateQuest } from "@/lib/quests.functions";
+import { trackedQuestsFirst, type Quest } from "@/lib/quest-rules";
 
 const questsQuery = queryOptions({ queryKey: ["quests"], queryFn: () => listQuests() });
 
@@ -30,8 +30,8 @@ function QuestLog() {
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const refresh = () => qc.invalidateQueries({ queryKey: ["quests"] });
 
-  const main = quests.filter((q) => !q.done && q.type === "main");
-  const side = quests.filter((q) => !q.done && q.type === "side");
+  const main = trackedQuestsFirst(quests.filter((q) => !q.done && q.type === "main"));
+  const side = trackedQuestsFirst(quests.filter((q) => !q.done && q.type === "side"));
   const done = quests.filter((q) => q.done);
   const selected = quests.find((q) => q.id === selectedId) ?? main[0] ?? side[0] ?? done[0] ?? null;
 
@@ -41,6 +41,10 @@ function QuestLog() {
   });
   const finish = useMutation({
     mutationFn: (v: { questId: number; done: boolean }) => setQuestDone({ data: v }),
+    onSuccess: refresh,
+  });
+  const track = useMutation({
+    mutationFn: (v: { questId: number; tracked: boolean }) => setQuestTracked({ data: v }),
     onSuccess: refresh,
   });
   const remove = useMutation({
@@ -134,6 +138,20 @@ function QuestLog() {
                 {selected.description || <span className="italic text-muted-foreground">No tale has been written of this quest.</span>}
               </p>
               <div className="mt-8 flex flex-wrap gap-3">
+                {!selected.done && (
+                <button
+                  onClick={() => {
+                    setSelectedId(selected.id);
+                    track.mutate({ questId: selected.id, tracked: !selected.tracked });
+                  }}
+                  aria-pressed={selected.tracked}
+                  disabled={track.isPending}
+                  className={`font-display flex items-center gap-2 border px-4 py-2 text-sm text-gold transition hover:bg-accent hover:glow-gold disabled:cursor-wait disabled:opacity-50 ${selected.tracked ? "border-gold bg-accent" : "border-gold-dim"}`}
+                >
+                  {selected.tracked ? <PinOff className="h-4 w-4" aria-hidden="true" /> : <Pin className="h-4 w-4" aria-hidden="true" />}
+                  {selected.tracked ? "Untrack Quest" : "Track Quest"}
+                </button>
+                )}
                 <button
                   onClick={() => finish.mutate({ questId: selected.id, done: !selected.done })}
                   className="font-display border border-gold px-4 py-2 text-sm text-gold transition hover:bg-accent hover:glow-gold"
@@ -160,6 +178,11 @@ function QuestLog() {
                   <Trash2 className="h-4 w-4" /> Abandon
                 </button>
               </div>
+              {track.isError && (
+                <p role="alert" className="mt-3 text-sm text-destructive">
+                  Could not change quest tracking. Please try again.
+                </p>
+              )}
             </section>
           </>
         )}
@@ -193,6 +216,12 @@ function QuestGroup({
               >
                 <span className={`h-1.5 w-1.5 rotate-45 ${q.done ? "bg-muted-foreground" : "bg-gold"}`} />
                 <span className="truncate">{q.name}</span>
+                {q.tracked && !q.done && (
+                  <span className="ml-auto shrink-0 text-gold" title="Tracked quest">
+                    <Pin className="h-4 w-4" aria-hidden="true" />
+                    <span className="sr-only">Tracked quest</span>
+                  </span>
+                )}
               </button>
             </li>
           ))}

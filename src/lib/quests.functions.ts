@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { createQuestSchema, updateQuestSchema, questDoneAfterObjectiveChange, type Quest } from "./quest-rules";
+import { createQuestSchema, updateQuestSchema, setQuestTrackedSchema, questDoneAfterObjectiveChange, type Quest } from "./quest-rules";
 
 async function db() {
   const { getDb } = await import("./db.server");
@@ -18,6 +18,7 @@ export const listQuests = createServerFn({ method: "GET" }).handler(async (): Pr
     description: q.description,
     location: q.location,
     done: !!q.done,
+    tracked: !!q.tracked,
     createdAt: q.created_at,
     objectives: objs
       .filter((o) => o.quest_id === q.id)
@@ -48,7 +49,8 @@ export const toggleObjective = createServerFn({ method: "POST" })
     const q = d.prepare("SELECT done FROM quests WHERE id = ?").get(obj.quest_id) as any;
     const all = d.prepare("SELECT done FROM objectives WHERE quest_id = ?").all(obj.quest_id) as any[];
     const done = questDoneAfterObjectiveChange(all.map((o) => ({ done: !!o.done })), !!q.done);
-    d.prepare("UPDATE quests SET done = ? WHERE id = ?").run(done ? 1 : 0, obj.quest_id);
+    d.prepare("UPDATE quests SET done = ?, tracked = CASE WHEN ? THEN 0 ELSE tracked END WHERE id = ?")
+      .run(done ? 1 : 0, done ? 1 : 0, obj.quest_id);
     return { questDone: done };
   });
 
@@ -56,7 +58,8 @@ export const setQuestDone = createServerFn({ method: "POST" })
   .inputValidator((data) => z.object({ questId: z.number().int(), done: z.boolean() }).parse(data))
   .handler(async ({ data }) => {
     const d = await db();
-    d.prepare("UPDATE quests SET done = ? WHERE id = ?").run(data.done ? 1 : 0, data.questId);
+    d.prepare("UPDATE quests SET done = ?, tracked = CASE WHEN ? THEN 0 ELSE tracked END WHERE id = ?")
+      .run(data.done ? 1 : 0, data.done ? 1 : 0, data.questId);
     if (data.done) d.prepare("UPDATE objectives SET done = 1 WHERE quest_id = ?").run(data.questId);
     return { ok: true };
   });
@@ -68,6 +71,19 @@ export const deleteQuest = createServerFn({ method: "POST" })
     d.prepare("DELETE FROM objectives WHERE quest_id = ?").run(data.questId);
     d.prepare("DELETE FROM quests WHERE id = ?").run(data.questId);
     return { ok: true };
+  });
+
+export const setQuestTracked = createServerFn({ method: "POST" })
+  .inputValidator((data) => setQuestTrackedSchema.parse(data))
+  .handler(async ({ data }) => {
+    const d = await db();
+    const result = d.prepare("UPDATE quests SET tracked = ? WHERE id = ? AND (done = 0 OR ? = 0)")
+      .run(data.tracked ? 1 : 0, data.questId, data.tracked ? 1 : 0);
+    if (Number(result.changes) === 0) {
+      if (!d.prepare("SELECT id FROM quests WHERE id = ?").get(data.questId)) throw new Error("Quest not found");
+      throw new Error("Completed quests cannot be tracked");
+    }
+    return { tracked: data.tracked };
   });
 
 export const updateQuest = createServerFn({ method: "POST" })
@@ -89,6 +105,7 @@ export const updateQuest = createServerFn({ method: "POST" })
     });
     const all = d.prepare("SELECT done FROM objectives WHERE quest_id = ?").all(data.id) as any[];
     const done = questDoneAfterObjectiveChange(all.map((o) => ({ done: !!o.done })), !!q.done);
-    d.prepare("UPDATE quests SET done = ? WHERE id = ?").run(done ? 1 : 0, data.id);
+    d.prepare("UPDATE quests SET done = ?, tracked = CASE WHEN ? THEN 0 ELSE tracked END WHERE id = ?")
+      .run(done ? 1 : 0, done ? 1 : 0, data.id);
     return { ok: true };
   });
